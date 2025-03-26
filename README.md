@@ -40,9 +40,7 @@ python nfsr_cycle_calculator.py
 ## Example Output
 
 For a 3-bit register with feedback function `x0+x1*x2`:
-============================================================
-NFSR Cycle Calculator
-============================================================
+
 
 Enter register length (1-20): 3
 
