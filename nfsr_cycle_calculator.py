@@ -11,12 +11,12 @@ import itertools
 from typing import List, Dict, Tuple, Callable, Set
 import time
 
-# Import example feedback functions if available
-try:
-    from example_feedback_functions import functions as example_functions
-    HAS_EXAMPLE_FUNCTIONS = True
-except ImportError:
-    HAS_EXAMPLE_FUNCTIONS = False
+# Import example feedback function s if available
+#try:
+#    from example_feedback_functions import functions as example_functions
+#    HAS_EXAMPLE_FUNCTIONS = True
+#except ImportError:
+#    HAS_EXAMPLE_FUNCTIONS = False
 
 
 class NFSRCycleCalculator:
