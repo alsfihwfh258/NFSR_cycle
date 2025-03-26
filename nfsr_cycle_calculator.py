@@ -119,9 +119,12 @@ class NFSRCycleCalculator:
             
             for i, cycle in enumerate(cycle_list, 1):
                 if len(cycle_list) <= 10 or i <= 3:  # Only show details for up to 3 cycles if there are many
-                    print(f"  Cycle {i}:")
-                    for state in cycle:
-                        print(f"    {''.join(map(str, state))}")
+                    print(f"  Cycle {i}:", end=" ")
+                    # Display states in a line with -> between them
+                    states = [f"{''.join(map(str, state))}" for state in cycle]
+                    # Add the first state again at the end to show the cycle completion
+                    states.append(states[0])
+                    print(" -> ".join(states))
             
             if len(cycle_list) > 10:
                 print(f"  ... and {len(cycle_list) - 3} more cycles of length {length}")
@@ -150,24 +153,32 @@ class NFSRCycleCalculator:
         assert total_states == self.max_states, f"Error: Only found {total_states} states out of {self.max_states}"
 
     def save_cycles_to_file(self, cycles: Dict[int, List[List[int]]], filename: str = "nfsr_cycles.txt"):
-        """Save all cycle information to a file."""
+        """Save all cycle information to a file with progress feedback."""
+        total_cycle_lengths = len(cycles)
+        print(f"\nSaving cycle information to {filename}...")
+        print(f"Writing data for {total_cycle_lengths} different cycle lengths...")
+        
         with open(filename, 'w') as f:
             f.write(f"NFSR Cycle Analysis\n")
             f.write(f"Register length: {self.register_length}\n")
             
             total_cycles = sum(len(cycle_list) for cycle_list in cycles.values())
             f.write(f"Total unique cycles: {total_cycles}\n\n")
+            print(f"Writing header information... ✓")
             
-            for length, cycle_list in sorted(cycles.items()):
+            for i, (length, cycle_list) in enumerate(sorted(cycles.items()), 1):
                 f.write(f"Cycles of length {length}: {len(cycle_list)}\n")
+                print(f"Writing cycles of length {length} ({len(cycle_list)} cycles)... ", end='', flush=True)
                 
-                for i, cycle in enumerate(cycle_list, 1):
-                    f.write(f"  Cycle {i}:\n")
-                    for state in cycle:
-                        f.write(f"    {''.join(map(str, state))}\n")
+                for j, cycle in enumerate(cycle_list, 1):
+                    f.write(f"  Cycle {j}: ")
+                    states = [f"{''.join(map(str, state))}" for state in cycle]
+                    states.append(states[0])
+                    f.write(" -> ".join(states) + "\n")
                 f.write("\n")
+                print("✓")
             
-            # Write distribution statistics
+            print("Writing distribution statistics... ", end='', flush=True)
             f.write("Cycle Distribution Statistics:\n")
             f.write("-" * 30 + "\n")
             
@@ -184,8 +195,9 @@ class NFSRCycleCalculator:
             
             f.write("-" * 30 + "\n")
             f.write(f"Total: {total_cycles} cycles ({total_states} states out of {self.max_states} possible)\n")
+            print("✓")
         
-        print(f"\nCycle information saved to {filename}")
+        print(f"\nFile saved successfully to {filename} ✓")
 
 
 # Example usage and predefined feedback functions
@@ -238,6 +250,44 @@ def create_custom_feedback_function(expression: str, register_length: int) -> Ca
     
     return feedback_function
 
+def parse_feedback_expression(expression: str, register_length: int) -> Callable[[List[int]], int]:
+    """
+    Parse a feedback function from a string expression in the format x0+x1*x2.
+    
+    This format uses:
+    - x0, x1, x2, etc. to refer to the bits of the register
+    - + for XOR operations
+    - * for AND operations
+    - * has higher priority than + in calculations
+    
+    Example: "x0+x1*x2+x2*x3" means x[0] ⊕ (x[1] & x[2]) ⊕ (x[2] & x[3])
+    
+    Args:
+        expression: The expression string in the format x0+x1*x2
+        register_length: Length of the register
+        
+    Returns:
+        A function that takes a state and returns the feedback bit
+    """
+    # Create a function that evaluates the expression
+    def feedback_function(state: List[int]) -> int:
+        # Convert expression to Python syntax (x0 -> x[0], + -> ^, * -> &)
+        expr = expression
+        
+        # Convert xN to state[N] for all possible register bits
+        for i in range(register_length):
+            expr = expr.replace(f"x{i}", f"state[{i}]")
+        
+        # Replace operators (+ -> ^ for XOR, * -> & for AND)
+        expr = expr.replace("+", " ^ ")
+        expr = expr.replace("*", " & ")
+        
+        # Evaluate the expression
+        result = eval(expr)
+        return result % 2
+    
+    return feedback_function
+
 
 def main():
     print("=" * 60)
@@ -255,50 +305,13 @@ def main():
         except ValueError:
             print("Please enter a valid integer.")
     
-    # Define available feedback function options
-    menu_options = [
-        "Predefined example: x[0] ⊕ (x[1] AND x[2])",
-        "Fibonacci LFSR: x[0] ⊕ x[1]",
-        "Custom feedback function"
-    ]
+    # Get feedback function directly from user
+    print("\nEnter your feedback function in the format: x0+x1*x2")
+    print("Use + for XOR operations and * for AND operations")
+    print("Example: x0+x1*x2+x2*x3 means x[0] ⊕ (x[1] & x[2]) ⊕ (x[2] & x[3])")
     
-    # Add example functions from the imported module if available
-    if HAS_EXAMPLE_FUNCTIONS:
-        for name in example_functions.keys():
-            menu_options.append(f"Example: {name}")
-    
-    print("\nSelect feedback function type:")
-    for i, option in enumerate(menu_options, 1):
-        print(f"{i}. {option}")
-    
-    while True:
-        try:
-            function_choice = int(input(f"\nEnter your choice (1-{len(menu_options)}): "))
-            if function_choice < 1 or function_choice > len(menu_options):
-                print(f"Please enter a number between 1 and {len(menu_options)}.")
-                continue
-            break
-        except ValueError:
-            print("Please enter a valid integer.")
-    
-    if function_choice == 1:
-        feedback_function = example_feedback_function
-        print("\nUsing predefined example feedback function: x[0] ⊕ (x[1] AND x[2])")
-    elif function_choice == 2:
-        feedback_function = fibonacci_feedback
-        print("\nUsing Fibonacci LFSR feedback function: x[0] ⊕ x[1]")
-    elif function_choice == 3:
-        print("\nEnter your custom feedback function using Python syntax.")
-        print("Use x[i] to refer to the i-th bit of the register (0-indexed).")
-        print("Example: x[0] ^ (x[1] & x[2])")
-        expression = input("\nFeedback function: ")
-        feedback_function = create_custom_feedback_function(expression, register_length)
-    else:
-        # User selected one of the example functions
-        example_index = function_choice - 4  # Adjust for the first 3 options
-        function_name = list(example_functions.keys())[example_index]
-        feedback_function = example_functions[function_name]
-        print(f"\nUsing example feedback function: {function_name}")
+    expression = input("\nFeedback function: ")
+    feedback_function = parse_feedback_expression(expression, register_length)
     
     # Ask if user wants to save results to file
     save_to_file = input("\nDo you want to save results to a file? (y/n): ").lower().startswith('y')

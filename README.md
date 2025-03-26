@@ -101,10 +101,28 @@ The program displays:
 
 ## Saving Results
 
-When prompted, you can choose to save the results to a file. The file will contain:
+When prompted, you can choose to save the results to a file. The program provides detailed feedback during the saving process:
+- Shows progress for each cycle length being written
+- Indicates completion of each major section (header, cycles, statistics)
+- Confirms successful file save with checkmarks (✓)
+
+The saved file contains:
 - All cycle information in a readable format
 - Cycle distribution statistics
 - Total number of cycles and states
+
+Example of the save process output:
+```
+Saving cycle information to nfsr_cycles.txt...
+Writing data for 3 different cycle lengths...
+Writing header information... ✓
+Writing cycles of length 1 (1 cycles)... ✓
+Writing cycles of length 4 (2 cycles)... ✓
+Writing cycles of length 7 (1 cycles)... ✓
+Writing distribution statistics... ✓
+
+File saved successfully to nfsr_cycles.txt ✓
+```
 
 ## Performance Note
 
