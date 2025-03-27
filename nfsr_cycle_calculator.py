@@ -359,8 +359,8 @@ def main():
     calculation_time = end_time - start_time
     
     # Display results
- #   calculator.display_cycles(cycles)
- #   calculator.calculate_cycle_distribution(cycles)
+    calculator.display_cycles(cycles)
+    calculator.calculate_cycle_distribution(cycles)
     
     # Save to file if requested
     if save_to_file:
