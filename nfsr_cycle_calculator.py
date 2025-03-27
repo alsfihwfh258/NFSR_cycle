@@ -269,22 +269,48 @@ def parse_feedback_expression(expression: str, register_length: int) -> Callable
     Returns:
         A function that takes a state and returns the feedback bit
     """
+    # Remove all whitespace from the expression
+    expr = ''.join(expression.split())
+    
+    # Validate the expression format
+    if not expr:
+        raise ValueError("Expression cannot be empty")
+    
+    # Check for valid characters
+    valid_chars = set('x0123456789+*')
+    if not all(c in valid_chars for c in expr):
+        raise ValueError("Invalid characters in expression. Use only x, digits, +, and *")
+    
+    # Check for valid variable references
+    terms = expr.replace('+', ' ').replace('*', ' ').split()
+    for term in terms:
+        if not term.startswith('x'):
+            raise ValueError(f"Invalid term '{term}'. All terms must start with 'x'")
+        try:
+            index = int(term[1:])
+            if index >= register_length:
+                raise ValueError(f"Register index {index} is out of range for register length {register_length}")
+        except ValueError:
+            raise ValueError(f"Invalid register index in term '{term}'")
+    
     # Create a function that evaluates the expression
     def feedback_function(state: List[int]) -> int:
-        # Convert expression to Python syntax (x0 -> x[0], + -> ^, * -> &)
-        expr = expression
-        
-        # Convert xN to state[N] for all possible register bits
-        for i in range(register_length):
-            expr = expr.replace(f"x{i}", f"state[{i}]")
-        
-        # Replace operators (+ -> ^ for XOR, * -> & for AND)
-        expr = expr.replace("+", " ^ ")
-        expr = expr.replace("*", " & ")
-        
-        # Evaluate the expression
-        result = eval(expr)
-        return result % 2
+        try:
+            # Convert expression to Python syntax
+            py_expr = expr
+            
+            # Convert xN to state[N] for all possible register bits
+            for i in range(register_length - 1, -1, -1):  # Process larger indices first
+                py_expr = py_expr.replace(f'x{i}', f'state[{i}]')
+            
+            # Replace operators
+            py_expr = py_expr.replace('+', ' ^ ').replace('*', ' & ')
+            
+            # Evaluate the expression
+            result = eval(py_expr)
+            return result % 2
+        except Exception as e:
+            raise ValueError(f"Error evaluating feedback function: {str(e)}")
     
     return feedback_function
 
@@ -305,13 +331,19 @@ def main():
         except ValueError:
             print("Please enter a valid integer.")
     
-    # Get feedback function directly from user
-    print("\nEnter your feedback function in the format: x0+x1*x2")
-    print("Use + for XOR operations and * for AND operations")
-    print("Example: x0+x1*x2+x2*x3 means x[0] ⊕ (x[1] & x[2]) ⊕ (x[2] & x[3])")
-    
-    expression = input("\nFeedback function: ")
-    feedback_function = parse_feedback_expression(expression, register_length)
+    # Get feedback function from user with validation
+    while True:
+        print("\nEnter your feedback function in the format: x0+x1*x2")
+        print("Use + for XOR operations and * for AND operations")
+        print("Example: x0+x1*x2+x2*x3 means x[0] ⊕ (x[1] & x[2]) ⊕ (x[2] & x[3])")
+        
+        expression = input("\nFeedback function: ")
+        try:
+            feedback_function = parse_feedback_expression(expression, register_length)
+            break
+        except ValueError as e:
+            print(f"\nError: {str(e)}")
+            print("Please try again.")
     
     # Ask if user wants to save results to file
     save_to_file = input("\nDo you want to save results to a file? (y/n): ").lower().startswith('y')
@@ -327,8 +359,8 @@ def main():
     calculation_time = end_time - start_time
     
     # Display results
-    calculator.display_cycles(cycles)
-    calculator.calculate_cycle_distribution(cycles)
+ #   calculator.display_cycles(cycles)
+ #   calculator.calculate_cycle_distribution(cycles)
     
     # Save to file if requested
     if save_to_file:
