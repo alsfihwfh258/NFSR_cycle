@@ -259,8 +259,10 @@ def parse_feedback_expression(expression: str, register_length: int) -> Callable
     - + for XOR operations
     - * for AND operations
     - * has higher priority than + in calculations
+    - Constants 0 and 1 are also supported (e.g., x0+1 means x[0] ⊕ 1)
     
     Example: "x0+x1*x2+x2*x3" means x[0] ⊕ (x[1] & x[2]) ⊕ (x[2] & x[3])
+    Example: "x0+x1*x2+1" means x[0] ⊕ (x[1] & x[2]) ⊕ 1
     
     Args:
         expression: The expression string in the format x0+x1*x2
@@ -284,8 +286,12 @@ def parse_feedback_expression(expression: str, register_length: int) -> Callable
     # Check for valid variable references
     terms = expr.replace('+', ' ').replace('*', ' ').split()
     for term in terms:
+        # Allow constant terms 0 and 1
+        if term in ['0', '1']:
+            continue
+            
         if not term.startswith('x'):
-            raise ValueError(f"Invalid term '{term}'. All terms must start with 'x'")
+            raise ValueError(f"Invalid term '{term}'. Terms must start with 'x' or be constants (0 or 1)")
         try:
             index = int(term[1:])
             if index >= register_length:
@@ -335,6 +341,7 @@ def main():
     while True:
         print("\nEnter your feedback function in the format: x0+x1*x2")
         print("Use + for XOR operations and * for AND operations")
+        print("Constants 0 and 1 are supported (e.g., x0+1 means x[0] ⊕ 1)")
         print("Example: x0+x1*x2+x2*x3 means x[0] ⊕ (x[1] & x[2]) ⊕ (x[2] & x[3])")
         
         expression = input("\nFeedback function: ")
